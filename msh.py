@@ -177,18 +177,33 @@ class msh:
 
         self.__active_mails_count += 1
 
-        m_body = m_parsed.get_payload().split("\n")
+        for m_body in self._get_payload_from_msg(m_parsed):
+            if self._check_user(m_body[0]):
+                for i in xrange(1, len(m_body)):
+                    #self._thread_routine(ddm_from, m_body[i].strip())
+                    Process(target=self._thread_routine, args=(m_from, m_body[i].strip())).start()
+                #for
+            else:
+                print "Received an incorrect pair of user+password!"
+            #if
+        #for
+        return True
+    #def
 
-        if self._check_user(m_body[0]):
-            for i in xrange(1, len(m_body)):
-                #self._thread_routine(m_from, m_body[i].strip())
-                Process(target=self._thread_routine, args=(m_from, m_body[i].strip())).start()
-                #thread.start_new_thread(self._thread_routine, (m_from, m_body[i].strip()))
+    def _get_payload_from_msg(self, parsed_email):
+        """
+        Generator for extracting all message boundles from email
+        """
+        if parsed_email.is_multipart():
+            for msg_from_multipart in parsed_email.get_payload():
+                # proccesing recursively all multipart messages
+                for sub_msg in self._get_payload_from_msg(msg_from_multipart):
+                    yield sub_msg
+                #for
             #for
         else:
-            print "Received an incorrect pair of user+password!"
+            yield parsed_email.get_payload().split("\n")
         #if
-        return True 
     #def
 
     def _thread_routine(self, m_from, command):
