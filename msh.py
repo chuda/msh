@@ -53,7 +53,7 @@ class msh:
 
             if is_enabled(self.get_param_str("Mail", "USE_SSL")):
                 session = smtplib.SMTP_SSL(self.get_param_str("Mail", "SMTP_SERVER"),
-                                           self.get_param_int("Mail", "SMTP_SSL_PORT")))
+                                           self.get_param_int("Mail", "SMTP_SSL_PORT"))
             else:
                 session = smtplib.SMTP(self.get_param_str("Mail", "SMTP_SERVER"),
                                        self.get_param_int("Mail", "SMTP_PORT"))
@@ -221,19 +221,69 @@ class msh:
         if 0 >= len(command):
             return None
         #if
-        print "[%s] Going to process command '%s'" % (datetime.today().strftime('%d/%m/%y %H:%M'), command)
-        get_rev = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        get_rev.wait()
 
+        print "[%s] Going to process command '%s'" % (datetime.today().strftime('%d/%m/%y %H:%M'), command)
         buff = "[%s] %s \r\n" % (datetime.today().strftime('%d/%m/%y %H:%M'), command)
 
-        for str in get_rev.stdout.readlines():
-            buff += str
-        #for
+        if ":list" == command:
+            pass
+        elif command.startswith(":stop"):
+            id = 0
+            try:
+                id = int(command[5:])
+                pass
+            except ValueError as e:
+                buf += "Error! Got incorrect parameter for 'stop' command '%s'\n" % (command[5:])
+                sys.stderr.write("Error! Got incorrect parameter for 'stop' command '%s'\n" % (command[5:]))
+            #try
+        else:
+            time = None
+            if command.startswith(":time="):
+                try:
+                    ind = command.index(" ")
+                    try:
+                        time = int(command[6:ind])
+                        command = command[ind+1:]
+                    except ValueError as e:
+                        buff += "Error! Got incorrect parameter for 'time' command '%s'\n" % (command[6:ind])
+                        sys.stderr.write("Error! Got incorrect parameter for 'time' command '%s'\n" % (command[6:ind]))
+                        return buff
+                    #try
+                except ValueError as e:
+                    buff += "Error! Wrong format of 'time' command '%s'\n" % (command[6:])
+                    sys.stderr.write("Error! Wrong format of 'time' command '%s'\n" % (command[6:]))
+                    return buff
+                #try
+            #if
 
-        buff += "retcode = %d\r\n" % get_rev.returncode
+            out_buf = []
+            t = threading.Thread(target=self._run_popen, args=(command, out_buf))
+            t.start()
+            t.join(time)
+            buff += "\n".join(out_buf)
+
+            if t.isAlive():
+                try:
+                    t._Thread__stop()
+                    buff += "Thread has timeouted after timeout = %i!" % (time)
+                except:
+                    sys.stream.write("Thread with command '%s' could not be terminated" % (command))
+                #try
+            #if
+        #if
 
         return buff
+    #def
+
+    def _run_popen(self, cmd, out_buf_list):
+        get_rev = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        get_rev.wait()
+
+        for str in get_rev.stdout.readlines():
+            out_buf_list.append(str)
+        #for
+
+        out_buf_list.append("retcode = %d\r\n" % get_rev.returncode)
     #def
 
     def check_for_new_commands(self):
