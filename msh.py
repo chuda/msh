@@ -52,12 +52,8 @@ class msh:
                                        msg)
 
             if is_enabled(self.get_param_str("Mail", "USE_SSL")):
-                # Currently in python SMTP_SSL is broken, so always using usual version
-                #session = smtplib.SMTP_SSL(self.get_param_str("Mail", "SMTP_SERVER"),
-                #                           self.get_param_int("Mail", "SMTP_SSL_PORT")))
-                session = smtplib.SMTP(self.get_param_str("Mail", "SMTP_SERVER"),
-                                       self.get_param_int("Mail", "SMTP_PORT"))
-
+                session = smtplib.SMTP_SSL(self.get_param_str("Mail", "SMTP_SERVER"),
+                                           self.get_param_int("Mail", "SMTP_SSL_PORT")))
             else:
                 session = smtplib.SMTP(self.get_param_str("Mail", "SMTP_SERVER"),
                                        self.get_param_int("Mail", "SMTP_PORT"))
